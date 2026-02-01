@@ -18,7 +18,8 @@ import { chat } from '../src/lib/gemini.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const BASE_URL = process.env.API_BASE_URL || 'https://baitmindai-api.onrender.com';
+// Default to localhost when running locally; set API_BASE_URL for deployed URL (e.g. Render)
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
 const API_KEY = process.env.API_KEY;
 const MAX_EXCHANGES = 10;
 const SCAMMER_TYPE = process.env.TEST_SCAMMER || 'tamil';

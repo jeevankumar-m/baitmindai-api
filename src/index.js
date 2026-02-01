@@ -19,6 +19,16 @@ import { isEngagementComplete } from './completion.js';
 import { sendGuviCallbackAsync } from './callback.js';
 
 const app = express();
+
+// CORS: allow evaluation platform / browser testers (Section 4–5)
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 // Parse JSON body; also accept when Content-Type is missing/wrong so GUVI tester passes
 app.use(express.json({ strict: false, type: () => true }));
 
@@ -52,7 +62,7 @@ function toCamelCaseBody(body) {
 
 /**
  * Validate request body per document Section 6. Lenient so GUVI endpoint tester passes.
- * Required: sessionId (string or number), message (object), message.text (string or coerced).
+ * Required: sessionId (string or number), message (object or string for text-only).
  * Optional: conversationHistory (array; if missing/null treated as []), metadata (object).
  */
 function validateBody(body) {
@@ -60,20 +70,23 @@ function validateBody(body) {
   const sessionId = body.sessionId ?? body.session_id;
   const message = body.message ?? body.msg;
   if (sessionId === undefined || sessionId === null) return 'Missing sessionId';
-  if (message === undefined || message === null || typeof message !== 'object') return 'Missing or invalid message';
+  if (message === undefined || message === null) return 'Missing message';
+  if (typeof message !== 'object' && typeof message !== 'string') return 'Invalid message (must be object or string)';
   const conv = body.conversationHistory ?? body.conversation_history;
   if (conv != null && !Array.isArray(conv)) return 'conversationHistory must be an array when provided';
   return null;
 }
 
-/** Normalize body: camelCase + message.text/sessionId as string (GUVI tester may send numbers or snake_case). */
+/** Normalize body: camelCase + message.text/content/sessionId as string (GUVI tester may send numbers or snake_case). */
 function normalizeBody(body) {
   const b = toCamelCaseBody(body);
-  const message = b.message ?? {};
+  let message = b.message ?? b.msg ?? {};
+  if (typeof message === 'string') message = { text: message };
   const sessionId = String(b.sessionId ?? '');
+  const text = message.text ?? message.content ?? message.body ?? '';
   const normalizedMessage = {
     sender: message.sender ?? 'scammer',
-    text: String(message.text ?? ''),
+    text: String(text),
     timestamp: message.timestamp ?? new Date().toISOString(),
   };
   const conversationHistory = Array.isArray(b.conversationHistory) ? b.conversationHistory : [];
@@ -133,7 +146,8 @@ function sendCallbackAfterIdle(sessionId) {
   sendGuviCallbackAsync(callbackPayload);
 }
 
-app.post('/api/message', apiKeyAuth, async (req, res) => {
+/** Single message handler (Section 5–8): validate, detect scam, agent reply, callback when complete. */
+async function handleMessage(req, res) {
   console.log('[Request]', JSON.stringify(req.body, null, 2));
 
   const err = validateBody(req.body);
@@ -143,7 +157,6 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
   }
 
   const { sessionId, message, conversationHistory, metadata } = normalizeBody(req.body);
-  const fullHistory = [...conversationHistory, message];
 
   if (pendingCallbackTimeouts.has(sessionId)) {
     clearTimeout(pendingCallbackTimeouts.get(sessionId));
@@ -191,7 +204,11 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
     res.status(500);
     return jsonReply(res, 'error', 'I didn’t get that. Can you repeat?');
   }
-});
+}
+
+// Section 5–6: Accept incoming message events. Support both /api/message and /message for evaluation platforms.
+app.post('/api/message', apiKeyAuth, handleMessage);
+app.post('/message', apiKeyAuth, handleMessage);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
