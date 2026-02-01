@@ -1,0 +1,20 @@
+{
+  "name": "baitmindai",
+  "version": "1.0.0",
+  "description": "Baimind AI is a API tool which detects scams and reports and acts as a honeypot system to avoid fraud and collects intelligence on the fraud source",
+  "license": "ISC",
+  "author": "Elevix Studios",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test:api": "node scripts/test-api.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@google/genai": "^1.39.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  }
+}
