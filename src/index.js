@@ -67,6 +67,41 @@ function buildCallbackPayload(sessionId, totalMessagesExchanged, extractedIntell
   };
 }
 
+/** Pending timeouts: sessionId -> timeoutId. Cleared when a new message arrives for that session. */
+const pendingCallbackTimeouts = new Map();
+
+const CALLBACK_IDLE_SECONDS = Math.min(7, Math.max(5, parseInt(process.env.CALLBACK_IDLE_SECONDS, 10) || 6));
+
+/**
+ * Send GUVI callback for session after idle delay. Called by setTimeout only when no new message arrived.
+ */
+function sendCallbackAfterIdle(sessionId) {
+  pendingCallbackTimeouts.delete(sessionId);
+  if (wasCallbackSent(sessionId)) return;
+  const final = getSession(sessionId);
+  const totalMessages = final.messageCount;
+  const agentNotes =
+    'Scammer engaged; extracted ' +
+    [
+      final.extractedIntelligence.bankAccounts?.length && 'bank accounts',
+      final.extractedIntelligence.upiIds?.length && 'UPI IDs',
+      final.extractedIntelligence.phishingLinks?.length && 'links',
+      final.extractedIntelligence.phoneNumbers?.length && 'phone numbers',
+    ]
+      .filter(Boolean)
+      .join(', ') ||
+    'conversation intelligence';
+  const callbackPayload = buildCallbackPayload(
+    sessionId,
+    totalMessages,
+    final.extractedIntelligence,
+    agentNotes
+  );
+  console.log('\n#### PAYLOAD (after idle) ###\n' + JSON.stringify(callbackPayload, null, 2) + '\n');
+  markCallbackSent(sessionId);
+  sendGuviCallbackAsync(callbackPayload);
+}
+
 app.post('/api/message', apiKeyAuth, async (req, res) => {
   console.log('[Request]', JSON.stringify(req.body, null, 2));
 
@@ -78,6 +113,11 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
 
   const { sessionId, message, conversationHistory, metadata } = req.body;
   const fullHistory = [...(conversationHistory || []), message];
+
+  if (pendingCallbackTimeouts.has(sessionId)) {
+    clearTimeout(pendingCallbackTimeouts.get(sessionId));
+    pendingCallbackTimeouts.delete(sessionId);
+  }
 
   try {
     const scamDetected = await isScamIntent(conversationHistory || [], message);
@@ -109,27 +149,9 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
       isEngagementComplete(totalMessages, final.extractedIntelligence) &&
       !wasCallbackSent(sessionId)
     ) {
-      markCallbackSent(sessionId);
-      const agentNotes =
-        'Scammer engaged; extracted ' +
-        [
-          final.extractedIntelligence.bankAccounts.length && 'bank accounts',
-          final.extractedIntelligence.upiIds.length && 'UPI IDs',
-          final.extractedIntelligence.phishingLinks.length && 'links',
-          final.extractedIntelligence.phoneNumbers.length && 'phone numbers',
-        ]
-          .filter(Boolean)
-          .join(', ') ||
-        'conversation intelligence';
-      const callbackPayload = buildCallbackPayload(
-        sessionId,
-        totalMessages,
-        final.extractedIntelligence,
-        agentNotes
-      );
-      console.log('\n#### PAYLOAD ###\n' + JSON.stringify(callbackPayload, null, 2) + '\n');
-      sendGuviCallbackAsync(callbackPayload);
-      return jsonReply(res, 'success', reply, { finalPayload: callbackPayload });
+      const delayMs = CALLBACK_IDLE_SECONDS * 1000;
+      const timeoutId = setTimeout(() => sendCallbackAfterIdle(sessionId), delayMs);
+      pendingCallbackTimeouts.set(sessionId, timeoutId);
     }
 
     return jsonReply(res, 'success', reply);

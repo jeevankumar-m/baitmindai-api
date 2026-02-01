@@ -2,7 +2,7 @@
  * BaitmindAI test script: agent-based conversation with the honeypot API.
  * Acts as a "scammer bot" agent (LLM). Default: Tamil scammer, 10 exchanges
  * (10 scammer + 10 honeypot = 20 messages). Goal: trick scammer into giving UPI/link/phone.
- * When engagement completes, the final JSON payload is logged in this script as [Final JSON payload (callback)].
+ * Callback is sent 5-7s after the last message; check the server terminal for [PAYLOAD (after idle)].
  *
  * Usage: node scripts/test-api.js
  * Optional: TEST_SCAMMER=tamil (default) or TEST_SCAMMER=english
@@ -118,14 +118,6 @@ async function runAgentConversation(sessionId) {
     const result = await sendToHoneypot(sessionId, scammerMessage, conversationHistory);
     log('Honeypot response:', result);
 
-    if (result.finalPayload) {
-      console.log('\n' + '='.repeat(60));
-      console.log('[Final JSON payload (callback)]');
-      console.log('='.repeat(60));
-      console.log(JSON.stringify(result.finalPayload, null, 2));
-      console.log('='.repeat(60) + '\n');
-    }
-
     if (result.status !== 'success' || !result.reply) {
       console.log('(No reply; stopping)');
       break;
@@ -146,7 +138,7 @@ async function runAgentConversation(sessionId) {
 
   console.log('\n--- Summary ---');
   console.log('Total messages in conversation:', conversationHistory.length);
-  console.log('If engagement completed, the final JSON payload was logged above as [Final JSON payload (callback)].');
+  console.log('Callback is sent 5-7s after last message; check server logs for [PAYLOAD (after idle)].');
   console.log('='.repeat(60));
 }
 
