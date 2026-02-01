@@ -44,6 +44,17 @@ Dev with auto-reload:
 npm run dev
 ```
 
+## Deploy on Render
+
+1. Push the repo to GitHub/GitLab and connect it in [Render](https://render.com).
+2. Create a **Web Service**. Render will detect Node from `package.json`.
+3. **Build command:** `npm install`
+4. **Start command:** `npm start`
+5. **Health Check Path:** `/health` (optional; returns `{ "status": "ok", "service": "baitmindai" }`)
+6. **Environment** (Dashboard → Environment): set `API_KEY` and `GEMINI_API_KEY`. Optionally set `GEMINI_MODEL`, `SEND_GUVI_CALLBACK` (e.g. `true` for evaluation), `GUVI_CALLBACK_URL`.
+
+The app uses `PORT` from Render and listens on `0.0.0.0`. You can use the optional `render.yaml` as a Blueprint reference.
+
 ## API
 
 ### POST /api/message

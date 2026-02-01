@@ -1,6 +1,11 @@
 /**
- * BaitmindAI – Agentic Honey-Pot API
- * POST /api/message: accept message, detect scam, run agent, extract intelligence, return { status, reply }.
+ * BaitmindAI – Agentic Honey-Pot API (product requirements compliant)
+ *
+ * API: POST /api/message
+ * Auth: x-api-key, Content-Type: application/json (Section 4)
+ * Request: sessionId, message { sender, text, timestamp }, conversationHistory [], metadata {} (Section 6)
+ * Response: { "status": "success" | "error", "reply": "..." } (Section 8)
+ * Callback: POST to GUVI with sessionId, scamDetected, totalMessagesExchanged, extractedIntelligence, agentNotes (Section 12)
  */
 
 import 'dotenv/config';
@@ -15,6 +20,11 @@ import { sendGuviCallbackAsync } from './callback.js';
 
 const app = express();
 app.use(express.json());
+
+/** Health check for Render / load balancers (GET /health). */
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'baitmindai' });
+});
 
 function jsonReply(res, status, reply) {
   const payload = {
@@ -32,6 +42,23 @@ function validateBody(body) {
   if (typeof body.message.text !== 'string') return 'Missing or invalid message.text';
   if (!Array.isArray(body.conversationHistory)) return 'conversationHistory must be an array';
   return null;
+}
+
+/** Build callback payload in exact spec shape (Section 12). */
+function buildCallbackPayload(sessionId, totalMessagesExchanged, extractedIntelligence, agentNotes) {
+  return {
+    sessionId,
+    scamDetected: true,
+    totalMessagesExchanged,
+    extractedIntelligence: {
+      bankAccounts: Array.isArray(extractedIntelligence.bankAccounts) ? extractedIntelligence.bankAccounts : [],
+      upiIds: Array.isArray(extractedIntelligence.upiIds) ? extractedIntelligence.upiIds : [],
+      phishingLinks: Array.isArray(extractedIntelligence.phishingLinks) ? extractedIntelligence.phishingLinks : [],
+      phoneNumbers: Array.isArray(extractedIntelligence.phoneNumbers) ? extractedIntelligence.phoneNumbers : [],
+      suspiciousKeywords: Array.isArray(extractedIntelligence.suspiciousKeywords) ? extractedIntelligence.suspiciousKeywords : [],
+    },
+    agentNotes: typeof agentNotes === 'string' ? agentNotes : '',
+  };
 }
 
 app.post('/api/message', apiKeyAuth, async (req, res) => {
@@ -88,13 +115,12 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
           .filter(Boolean)
           .join(', ') ||
         'conversation intelligence';
-      const callbackPayload = {
+      const callbackPayload = buildCallbackPayload(
         sessionId,
-        scamDetected: true,
-        totalMessagesExchanged: totalMessages,
-        extractedIntelligence: final.extractedIntelligence,
-        agentNotes,
-      };
+        totalMessages,
+        final.extractedIntelligence,
+        agentNotes
+      );
       console.log('\n#### PAYLOAD ###\n' + JSON.stringify(callbackPayload, null, 2) + '\n');
       sendGuviCallbackAsync(callbackPayload);
     }
@@ -102,11 +128,12 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
     return jsonReply(res, 'success', reply);
   } catch (e) {
     console.error('Handler error:', e);
+    res.status(500);
     return jsonReply(res, 'error', 'I didn’t get that. Can you repeat?');
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`BaitmindAI listening on port ${PORT}`);
 });

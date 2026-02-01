@@ -1,0 +1,16 @@
+# Render Blueprint (optional). Use "New > Blueprint" or add repo and configure manually.
+# Set API_KEY and GEMINI_API_KEY in Render Dashboard > Environment.
+services:
+  - type: web
+    name: baitmindai-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: SEND_GUVI_CALLBACK
+        value: "true"
+      - key: GUVI_CALLBACK_URL
+        value: https://hackathon.guvi.in/api/updateHoneyPotFinalResult
