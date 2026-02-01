@@ -19,21 +19,35 @@ import { isEngagementComplete } from './completion.js';
 import { sendGuviCallbackAsync } from './callback.js';
 
 const app = express();
-app.use(express.json());
+// Parse JSON body; also accept when Content-Type is missing/wrong so GUVI tester passes
+app.use(express.json({ strict: false, type: () => true }));
 
 /** Health check for Render / load balancers (GET /health). */
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'baitmindai' });
 });
 
-function jsonReply(res, status, reply, extra = {}) {
+/** Response must match Section 8: only { status, reply }. No extra keys for success. */
+function jsonReply(res, status, reply) {
   const payload = {
     status: status === 'error' ? 'error' : 'success',
     reply: typeof reply === 'string' ? reply : 'Something went wrong.',
-    ...extra,
   };
   console.log('[Response]', JSON.stringify(payload, null, 2));
   return res.status(status === 'error' ? (res.statusCode >= 400 ? res.statusCode : 500) : 200).json(payload);
+}
+
+/**
+ * Accept both camelCase (spec) and snake_case (some testers). Returns body with camelCase keys.
+ */
+function toCamelCaseBody(body) {
+  if (!body || typeof body !== 'object') return body;
+  return {
+    sessionId: body.sessionId ?? body.session_id,
+    message: body.message ?? body.msg,
+    conversationHistory: body.conversationHistory ?? body.conversation_history,
+    metadata: body.metadata ?? body.meta,
+  };
 }
 
 /**
@@ -43,23 +57,28 @@ function jsonReply(res, status, reply, extra = {}) {
  */
 function validateBody(body) {
   if (!body || typeof body !== 'object') return 'Missing or invalid body';
-  if (body.sessionId === undefined || body.sessionId === null) return 'Missing sessionId';
-  if (body.message === undefined || body.message === null || typeof body.message !== 'object') return 'Missing or invalid message';
-  if (body.conversationHistory != null && !Array.isArray(body.conversationHistory)) return 'conversationHistory must be an array when provided';
+  const sessionId = body.sessionId ?? body.session_id;
+  const message = body.message ?? body.msg;
+  if (sessionId === undefined || sessionId === null) return 'Missing sessionId';
+  if (message === undefined || message === null || typeof message !== 'object') return 'Missing or invalid message';
+  const conv = body.conversationHistory ?? body.conversation_history;
+  if (conv != null && !Array.isArray(conv)) return 'conversationHistory must be an array when provided';
   return null;
 }
 
-/** Normalize body so message.text is string and sessionId is string (GUVI tester may send numbers). */
+/** Normalize body: camelCase + message.text/sessionId as string (GUVI tester may send numbers or snake_case). */
 function normalizeBody(body) {
-  const sessionId = String(body.sessionId ?? '');
-  const message = {
-    sender: body.message?.sender ?? 'scammer',
-    text: String(body.message?.text ?? ''),
-    timestamp: body.message?.timestamp ?? new Date().toISOString(),
+  const b = toCamelCaseBody(body);
+  const message = b.message ?? {};
+  const sessionId = String(b.sessionId ?? '');
+  const normalizedMessage = {
+    sender: message.sender ?? 'scammer',
+    text: String(message.text ?? ''),
+    timestamp: message.timestamp ?? new Date().toISOString(),
   };
-  const conversationHistory = Array.isArray(body.conversationHistory) ? body.conversationHistory : [];
-  const metadata = body.metadata && typeof body.metadata === 'object' ? body.metadata : {};
-  return { sessionId, message, conversationHistory, metadata };
+  const conversationHistory = Array.isArray(b.conversationHistory) ? b.conversationHistory : [];
+  const metadata = b.metadata && typeof b.metadata === 'object' ? b.metadata : {};
+  return { sessionId, message: normalizedMessage, conversationHistory, metadata };
 }
 
 /** Build callback payload in exact spec shape (Section 12). */
