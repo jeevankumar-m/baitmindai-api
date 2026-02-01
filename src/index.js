@@ -26,21 +26,27 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'baitmindai' });
 });
 
-function jsonReply(res, status, reply) {
+function jsonReply(res, status, reply, extra = {}) {
   const payload = {
     status: status === 'error' ? 'error' : 'success',
     reply: typeof reply === 'string' ? reply : 'Something went wrong.',
+    ...extra,
   };
   console.log('[Response]', JSON.stringify(payload, null, 2));
   return res.status(status === 'error' ? (res.statusCode >= 400 ? res.statusCode : 500) : 200).json(payload);
 }
 
+/**
+ * Validate request body per document Section 6.
+ * Required: sessionId (string), message (object), message.text (string).
+ * Optional: conversationHistory (array; if missing treated as []), metadata (object).
+ */
 function validateBody(body) {
   if (!body || typeof body !== 'object') return 'Missing or invalid body';
   if (!body.sessionId || typeof body.sessionId !== 'string') return 'Missing or invalid sessionId';
   if (!body.message || typeof body.message !== 'object') return 'Missing or invalid message';
   if (typeof body.message.text !== 'string') return 'Missing or invalid message.text';
-  if (!Array.isArray(body.conversationHistory)) return 'conversationHistory must be an array';
+  if (body.conversationHistory != null && !Array.isArray(body.conversationHistory)) return 'conversationHistory must be an array when provided';
   return null;
 }
 
@@ -123,6 +129,7 @@ app.post('/api/message', apiKeyAuth, async (req, res) => {
       );
       console.log('\n#### PAYLOAD ###\n' + JSON.stringify(callbackPayload, null, 2) + '\n');
       sendGuviCallbackAsync(callbackPayload);
+      return jsonReply(res, 'success', reply, { finalPayload: callbackPayload });
     }
 
     return jsonReply(res, 'success', reply);

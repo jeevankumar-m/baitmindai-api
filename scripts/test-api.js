@@ -1,12 +1,13 @@
 /**
  * BaitmindAI test script: agent-based conversation with the honeypot API.
- * Acts as a "scammer bot" agent (LLM). Default: Tamil scammer, 20 exchanges
- * (20 scammer + 20 honeypot = 40 messages). Goal: trick scammer into giving UPI/link/phone.
- * Check the server terminal for [Final result] callback JSON when engagement completes.
+ * Acts as a "scammer bot" agent (LLM). Default: Tamil scammer, 10 exchanges
+ * (10 scammer + 10 honeypot = 20 messages). Goal: trick scammer into giving UPI/link/phone.
+ * When engagement completes, the final JSON payload is logged in this script as [Final JSON payload (callback)].
  *
  * Usage: node scripts/test-api.js
  * Optional: TEST_SCAMMER=tamil (default) or TEST_SCAMMER=english
- * Requires: .env with API_KEY, GEMINI_API_KEY (server running on PORT)
+ * Optional: API_BASE_URL=<url> to override (default: https://baitmindai-api.onrender.com)
+ * Requires: .env with API_KEY, GEMINI_API_KEY
  */
 
 import 'dotenv/config';
@@ -17,9 +18,9 @@ import { chat } from '../src/lib/gemini.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const BASE_URL = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+const BASE_URL = process.env.API_BASE_URL || 'https://baitmindai-api.onrender.com';
 const API_KEY = process.env.API_KEY;
-const MAX_EXCHANGES = 20;
+const MAX_EXCHANGES = 10;
 const SCAMMER_TYPE = process.env.TEST_SCAMMER || 'tamil';
 
 if (!API_KEY) {
@@ -117,6 +118,14 @@ async function runAgentConversation(sessionId) {
     const result = await sendToHoneypot(sessionId, scammerMessage, conversationHistory);
     log('Honeypot response:', result);
 
+    if (result.finalPayload) {
+      console.log('\n' + '='.repeat(60));
+      console.log('[Final JSON payload (callback)]');
+      console.log('='.repeat(60));
+      console.log(JSON.stringify(result.finalPayload, null, 2));
+      console.log('='.repeat(60) + '\n');
+    }
+
     if (result.status !== 'success' || !result.reply) {
       console.log('(No reply; stopping)');
       break;
@@ -137,7 +146,7 @@ async function runAgentConversation(sessionId) {
 
   console.log('\n--- Summary ---');
   console.log('Total messages in conversation:', conversationHistory.length);
-  console.log('Check the SERVER terminal for [Final result] callback JSON (sessionId, scamDetected, totalMessagesExchanged, extractedIntelligence, agentNotes).');
+  console.log('If engagement completed, the final JSON payload was logged above as [Final JSON payload (callback)].');
   console.log('='.repeat(60));
 }
 
