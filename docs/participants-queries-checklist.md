@@ -46,11 +46,14 @@ duration = metrics.get('engagementDurationSeconds', 0)
 
 ---
 
-## 5. API Timeout (30 seconds)
+## 5. API Timeout (30 seconds) – **Implemented**
 
 **What others missed:** 131 timeout errors across 29 hosts; one Render endpoint timed out 29 times.
 
-**Our implementation:** Single LLM call per turn + regex-only extraction. No long chains. Aim for &lt;30s per request (production hosting, not ngrok/laptop).
+**Our implementation:**
+- **One LLM call per turn:** Scam check runs only on the first message (and uses no LLM when totalMessages &lt; 2). For follow-up messages we assume already engaged → no second LLM. So every turn does at most **one** Gemini call (generateReply).
+- **Regex-only extraction:** `intelligence.js` uses only regex; no LLM for extraction.
+- Deploy on a proper host (e.g. Render); avoid ngrok / Dev Tunnels / local for evaluation.
 
 ---
 

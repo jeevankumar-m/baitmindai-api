@@ -200,7 +200,11 @@ async function handleMessage(req, res) {
   }
 
   try {
-    const scamDetected = await isScamIntent(conversationHistory, message);
+    // One LLM call per turn: only run scam check on first message; once we're in conversation, stay engaged (no second LLM).
+    const isFirstMessage = !conversationHistory || conversationHistory.length === 0;
+    const scamDetected = isFirstMessage
+      ? await isScamIntent(conversationHistory, message)
+      : true;
     if (!scamDetected) {
       return jsonReply(res, 'success', 'I am not interested. Please do not contact me again.');
     }

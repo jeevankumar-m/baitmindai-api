@@ -39,7 +39,8 @@ If in doubt or too little context, answer SCAM so the system keeps engaging.`;
       { max_tokens: 10, temperature: 0 }
     );
     const normalized = (reply || '').toUpperCase().trim();
-    return normalized.includes('SCAM') && !normalized.includes('NOT_SCAM');
+    if (normalized.includes('NOT_SCAM') || /NOT\s*SCAM/.test(normalized)) return false;
+    return normalized.includes('SCAM');
   } catch (err) {
     console.error('Scam detection error:', err.message);
     return true; // on error, engage agent
