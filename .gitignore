@@ -1,3 +1,7 @@
 node_modules/
 .env
 
+scripts/   
+
+.scammer-bot-system-prompt.txt
+.scammer-bot-tamil-system-prompt.txt

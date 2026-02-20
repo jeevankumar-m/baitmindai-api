@@ -8,7 +8,7 @@ import { dirname, join } from 'path';
 import { chat } from './lib/gemini.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROMPT_PATH = join(__dirname, '..', 'prompts', 'agent-system-prompt.txt');
+const PROMPT_PATH = join(__dirname, 'prompts', 'agent-system-prompt.txt');
 
 let cachedSystemPrompt = null;
 
