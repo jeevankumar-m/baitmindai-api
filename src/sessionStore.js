@@ -11,6 +11,10 @@ function defaultIntelligence() {
     upiIds: [],
     phishingLinks: [],
     phoneNumbers: [],
+    emailAddresses: [],
+    caseIds: [],
+    policyNumbers: [],
+    orderNumbers: [],
     suspiciousKeywords: [],
   };
 }
@@ -23,10 +27,12 @@ export function getSession(sessionId) {
       messageCount: 0,
       callbackSent: false,
       scamDetected: false,
+      createdAt: Date.now(),
     });
   }
   return sessions.get(sessionId);
 }
+
 
 export function appendToSession(sessionId, msg) {
   const session = getSession(sessionId);

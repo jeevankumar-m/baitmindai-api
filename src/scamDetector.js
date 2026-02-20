@@ -23,10 +23,10 @@ export async function isScamIntent(conversationHistory, message) {
 
   const conversation = allTexts.map((t, i) => `Message ${i + 1}: ${t}`).join('\n');
 
-  const systemPrompt = `You are a scam classifier. Given a short conversation (messages from a suspected scammer and possibly a user), output ONLY one word: SCAM or NOT_SCAM.
-SCAM = fraud/phishing intent: e.g. fake urgency, account block, verification, UPI/bank/payment requests, lottery, fake offers, credential stealing.
-NOT_SCAM = normal chat, support, or clearly no fraud intent.
-Only answer SCAM if there is clear evidence from the conversation. If in doubt or too little context, answer SCAM so the system can keep engaging.`;
+  const systemPrompt = `You are a scam classifier. Given a short conversation, output ONLY one word: SCAM or NOT_SCAM.
+SCAM = fraud intent in any form: bank/account block, OTP/verification, UPI/cashback/payment, phishing links, KYC update, fake job/lottery/refund/loan, electricity/govt/crypto/customs/tech support/income tax scams, urgency, asking for money or credentials.
+NOT_SCAM = normal chat or clearly no fraud intent.
+If in doubt or too little context, answer SCAM so the system keeps engaging.`;
 
   const userPrompt = `Conversation:\n${conversation}\n\nOne word (SCAM or NOT_SCAM):`;
 

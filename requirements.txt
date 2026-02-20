@@ -1,0 +1,2 @@
+# This project uses Node.js only. Dependencies are in package.json.
+# No Python dependencies required.

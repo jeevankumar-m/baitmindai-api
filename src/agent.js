@@ -48,7 +48,7 @@ function buildMessages(conversationHistory, latestMessage) {
  */
 export async function generateReply(conversationHistory, latestMessage) {
   const messages = buildMessages(conversationHistory, latestMessage);
-  const reply = await chat(messages, { max_tokens: 150, temperature: 0.8 });
+  const reply = await chat(messages, { max_tokens: 120, temperature: 0.75 });
 
   // Basic self-check: if reply contains honeypot/scam/AI/bot, return a safe fallback
   const lower = (reply || '').toLowerCase();

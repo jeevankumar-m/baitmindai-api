@@ -17,6 +17,10 @@ export function isEngagementComplete(messageCount, extractedIntelligence) {
     (extractedIntelligence.upiIds?.length ?? 0) > 0 ||
     (extractedIntelligence.phishingLinks?.length ?? 0) > 0 ||
     (extractedIntelligence.phoneNumbers?.length ?? 0) > 0 ||
+    (extractedIntelligence.emailAddresses?.length ?? 0) > 0 ||
+    (extractedIntelligence.caseIds?.length ?? 0) > 0 ||
+    (extractedIntelligence.policyNumbers?.length ?? 0) > 0 ||
+    (extractedIntelligence.orderNumbers?.length ?? 0) > 0 ||
     (extractedIntelligence.suspiciousKeywords?.length ?? 0) > 0;
 
   return hasAny;

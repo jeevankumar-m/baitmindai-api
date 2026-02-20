@@ -1,11 +1,11 @@
 /**
  * BaitmindAI test script: agent-based conversation with the honeypot API.
- * Acts as a "scammer bot" agent (LLM). Default: Tamil scammer, 10 exchanges
+ * Acts as a "scammer bot" agent (LLM). Default: English scammer, 10 exchanges
  * (10 scammer + 10 honeypot = 20 messages). Goal: trick scammer into giving UPI/link/phone.
  * Callback is sent 5-7s after the last message; check the server terminal for [PAYLOAD (after idle)].
  *
- * Usage: node scripts/test-api.js
- * Optional: TEST_SCAMMER=tamil (default) or TEST_SCAMMER=english
+ * Usage: node src/scripts/test-api.js  (or: npm run test:api)
+ * Optional: TEST_SCAMMER=english (default) or TEST_SCAMMER=tamil
  * Optional: API_BASE_URL=<url> to override (default: https://baitmindai-api.onrender.com)
  * Requires: .env with API_KEY, GEMINI_API_KEY
  */
@@ -14,7 +14,7 @@ import 'dotenv/config';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { chat } from '../src/lib/gemini.js';
+import { chat } from '../lib/gemini.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -22,7 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
 const API_KEY = process.env.API_KEY;
 const MAX_EXCHANGES = 10;
-const SCAMMER_TYPE = process.env.TEST_SCAMMER || 'tamil';
+const SCAMMER_TYPE = process.env.TEST_SCAMMER || 'english';
 
 if (!API_KEY) {
   console.error('Missing API_KEY in .env');
@@ -35,6 +35,7 @@ if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
 
 const SCAMMER_PROMPT_PATH = join(
   __dirname,
+  '..',
   '..',
   'prompts',
   SCAMMER_TYPE === 'tamil' ? 'scammer-bot-tamil-system-prompt.txt' : 'scammer-bot-system-prompt.txt'

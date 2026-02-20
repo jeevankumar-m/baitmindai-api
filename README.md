@@ -2,6 +2,30 @@
 
 AI-powered honeypot API that detects scam messages, engages in multi-turn conversations with a human-like persona, extracts scam-related intelligence, and (when enabled) reports results to the GUVI evaluation endpoint.
 
+## Project structure
+
+```
+├── README.md                 # Setup and usage (this file)
+├── src/                      # Source code (Node.js)
+│   ├── index.js             # Main API entry
+│   ├── agent.js             # Honeypot agent logic
+│   ├── scamDetector.js      # Scam intent classification
+│   ├── sessionStore.js      # In-memory session state
+│   ├── completion.js        # Engagement completion
+│   ├── callback.js           # GUVI callback client
+│   ├── intelligence.js      # Intelligence extraction
+│   ├── middleware/          # Auth (x-api-key)
+│   ├── lib/                 # Gemini / LLM clients
+│   └── scripts/             # Test scripts (e.g. test-api.js)
+├── prompts/                  # Agent system prompts
+├── docs/                     # Documentation
+│   ├── architecture.md
+│   └── honeypot_api_detailed_plan.md
+├── requirements.txt          # Python deps (N/A – see package.json)
+├── package.json              # Node.js dependencies
+└── .env.example              # Environment template
+```
+
 ## Requirements
 
 - Node.js 18+
@@ -121,5 +145,6 @@ Payload: `sessionId`, `scamDetected`, `totalMessagesExchanged`, `extractedIntell
 
 ## Documentation
 
-- [Honeypot API detailed plan](documentation/honeypot_api_detailed_plan.md)
+- [Architecture](docs/architecture.md)
+- [Honeypot API detailed plan](docs/honeypot_api_detailed_plan.md)
 - [Product requirements](productrequirements.txt)
